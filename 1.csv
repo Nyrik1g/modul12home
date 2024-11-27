@@ -1,0 +1,141 @@
+using System;
+
+namespace TicketVendingMachine
+{
+    public interface IState
+    {
+        void SelectTicket();
+        void InsertMoney(decimal amount);
+        void DispenseTicket();
+        void CancelTransaction();
+    }
+
+    public class TicketMachine
+    {
+        public IState IdleState { get; private set; }
+        public IState WaitingForMoneyState { get; private set; }
+        public IState MoneyReceivedState { get; private set; }
+        public IState TransactionCanceledState { get; private set; }
+
+        public IState CurrentState { get; set; }
+        public decimal TicketPrice { get; set; } = 50;
+        public decimal CurrentAmount { get; set; }
+
+        public TicketMachine()
+        {
+            IdleState = new IdleState(this);
+            WaitingForMoneyState = new WaitingForMoneyState(this);
+            MoneyReceivedState = new MoneyReceivedState(this);
+            TransactionCanceledState = new TransactionCanceledState(this);
+
+            CurrentState = IdleState;
+        }
+
+        public void SelectTicket() => CurrentState.SelectTicket();
+        public void InsertMoney(decimal amount) => CurrentState.InsertMoney(amount);
+        public void DispenseTicket() => CurrentState.DispenseTicket();
+        public void CancelTransaction() => CurrentState.CancelTransaction();
+    }
+    public class IdleState : IState
+    {
+        private TicketMachine _machine;
+
+        public IdleState(TicketMachine machine)
+        {
+            _machine = machine;
+        }
+
+        public void SelectTicket()
+        {
+            Console.WriteLine("Ticket selected. Please insert money.");
+            _machine.CurrentState = _machine.WaitingForMoneyState;
+        }
+
+        public void InsertMoney(decimal amount) => Console.WriteLine("Select a ticket first.");
+        public void DispenseTicket() => Console.WriteLine("No ticket selected.");
+        public void CancelTransaction() => Console.WriteLine("No transaction to cancel.");
+    }
+
+    public class WaitingForMoneyState : IState
+    {
+        private TicketMachine _machine;
+
+        public WaitingForMoneyState(TicketMachine machine)
+        {
+            _machine = machine;
+        }
+
+        public void SelectTicket() => Console.WriteLine("Ticket already selected.");
+        public void InsertMoney(decimal amount)
+        {
+            _machine.CurrentAmount += amount;
+            Console.WriteLine($"Inserted: {amount}, Total: {_machine.CurrentAmount}");
+            if (_machine.CurrentAmount >= _machine.TicketPrice)
+            {
+                _machine.CurrentState = _machine.MoneyReceivedState;
+            }
+        }
+
+        public void DispenseTicket() => Console.WriteLine("Insufficient money inserted.");
+        public void CancelTransaction()
+        {
+            Console.WriteLine("Transaction canceled.");
+            _machine.CurrentAmount = 0;
+            _machine.CurrentState = _machine.IdleState;
+        }
+    }
+
+    public class MoneyReceivedState : IState
+    {
+        private TicketMachine _machine;
+
+        public MoneyReceivedState(TicketMachine machine)
+        {
+            _machine = machine;
+        }
+
+        public void SelectTicket() => Console.WriteLine("Transaction in progress.");
+        public void InsertMoney(decimal amount) => Console.WriteLine("Sufficient money already inserted.");
+        public void DispenseTicket()
+        {
+            Console.WriteLine("Ticket dispensed.");
+            _machine.CurrentAmount = 0;
+            _machine.CurrentState = _machine.IdleState;
+        }
+
+        public void CancelTransaction()
+        {
+            Console.WriteLine("Transaction canceled. Returning money...");
+            _machine.CurrentAmount = 0;
+            _machine.CurrentState = _machine.IdleState;
+        }
+    }
+
+    public class TransactionCanceledState : IState
+    {
+        private TicketMachine _machine;
+
+        public TransactionCanceledState(TicketMachine machine)
+        {
+            _machine = machine;
+        }
+
+        public void SelectTicket() => Console.WriteLine("Transaction canceled. Start new operation.");
+        public void InsertMoney(decimal amount) => Console.WriteLine("Transaction canceled. Start new operation.");
+        public void DispenseTicket() => Console.WriteLine("Transaction canceled.");
+        public void CancelTransaction() => Console.WriteLine("Transaction already canceled.");
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            TicketMachine machine = new TicketMachine();
+
+            machine.SelectTicket();
+            machine.InsertMoney(20);
+            machine.InsertMoney(30);
+            machine.DispenseTicket();
+        }
+    }
+}
